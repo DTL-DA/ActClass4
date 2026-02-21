@@ -31,7 +31,7 @@ st.markdown("Este dashboard sigue la metodologia QUEST para un analisis estructu
 @st.cache_data
 def cargar_datos(ruta_archivo):
     try:
-        datos = pd.read_csv(ruta_archivo)
+        datos = pd.read_csv(/content/Comparativo_de_delitos_de_alto_impacto_en_la_ciudad_de_Barranquilla_20260221.csv)
         return datos
     except:
         st.error("No se encontro el archivo. Coloque 'datos.csv' en el directorio.")
