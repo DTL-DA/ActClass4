@@ -38,7 +38,7 @@ def cargar_datos(ruta_archivo):
         return pd.DataFrame()
 
 # U: Understand - Mostrar estructura de datos
-ruta_archivo = 'https://github.com/DTL-DA/ActClass4/blob/DTL-DA-patch-1/Comparativo_de_delitos_de_alto_impacto_en_la_ciudad_de_Barranquilla_20260221.csv'  # Reemplace con el nombre de su archivo adjunto
+ruta_archivo = 'Comparativo_de_delitos_de_alto_impacto_en_la_ciudad_de_Barranquilla_20260221.csv'  # Reemplace con el nombre de su archivo adjunto
 datos = cargar_datos(ruta_archivo)
 
 if not datos.empty:
