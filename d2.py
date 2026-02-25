@@ -40,21 +40,42 @@ df = df.dropna(subset=["Casos/denuncias último periodo"])
 df["Año"] = df["Años comparados"].str.split("-").str[1]
 
 # =========================
-# CREAR FECHA
+# CONVERTIR MESES EN ESPAÑOL A NÚMERO
+# =========================
+
+meses = {
+    "enero": 1,
+    "febrero": 2,
+    "marzo": 3,
+    "abril": 4,
+    "mayo": 5,
+    "junio": 6,
+    "julio": 7,
+    "agosto": 8,
+    "septiembre": 9,
+    "setiembre": 9,
+    "octubre": 10,
+    "noviembre": 11,
+    "diciembre": 12
+}
+
+df["Mes"] = df["Periodo meses comparado"].str.lower().map(meses)
+
+df = df.dropna(subset=["Mes", "Año"])
+
+# =========================
+# CREAR FECHA CORRECTA
 # =========================
 
 df["Fecha"] = pd.to_datetime(
-    df["Periodo meses comparado"] + " " + df["Año"],
-    errors="coerce"
+    dict(year=df["Año"].astype(int),
+         month=df["Mes"].astype(int),
+         day=1)
 )
 
-df = df.dropna(subset=["Fecha"])
-
 # =========================
-# CREAR SERIE AGREGADA
+# CREAR SERIE TEMPORAL
 # =========================
-
-df = df.sort_values("Fecha")
 
 serie = (
     df.groupby("Fecha")["Casos/denuncias último periodo"]
@@ -62,21 +83,16 @@ serie = (
     .sort_index()
 )
 
-# Forzar frecuencia mensual
-serie = serie.asfreq("M")
+serie = serie.asfreq("MS")  # Frecuencia mensual inicio de mes
 
 st.subheader("Resumen de la serie")
 st.write("Fecha inicial:", serie.index.min())
 st.write("Fecha final:", serie.index.max())
 st.write("Cantidad de meses:", len(serie))
 
-# Verificación crítica
 if serie.empty:
-    st.error("La serie quedó vacía. Revisar estructura del archivo.")
+    st.error("La serie sigue vacía. Revisar datos originales.")
     st.stop()
-
-if len(serie) < 12:
-    st.warning("Hay pocos datos. El modelo puede ser inestable.")
 
 # =========================
 # MODELO
@@ -89,7 +105,7 @@ modelo = ExponentialSmoothing(
 ).fit()
 
 # =========================
-# PRONÓSTICO
+# PRONÓSTICO HASTA DICIEMBRE 2025
 # =========================
 
 ultima_fecha = serie.index[-1]
@@ -111,15 +127,11 @@ ax.plot(serie.index, serie.values, label="Histórico")
 if not pronostico.empty:
     ax.plot(pronostico.index, pronostico.values, linestyle="--", label="Pronóstico")
 
-ax.legend()
 ax.set_xlabel("Fecha")
 ax.set_ylabel("Casos")
+ax.legend()
 
 st.pyplot(fig)
-
-# =========================
-# TABLA
-# =========================
 
 if not pronostico.empty:
     st.subheader("Pronóstico hasta diciembre 2025")
