@@ -4,83 +4,115 @@ import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
-st.set_page_config(page_title="Pronóstico Delitos de Alto Impacto", layout="wide")
+st.set_page_config(page_title="Pronóstico Delitos Barranquilla", layout="wide")
 
 st.title("Pronóstico de Delitos de Alto Impacto en Barranquilla")
 
-# Cargar archivo
-archivo = st.file_uploader("Cargar archivo CSV", type=["csv"])
+# =========================
+# CARGA DE DATOS
+# =========================
 
-if archivo is not None:
+try:
+    df = pd.read_csv("Delitos_de_alto_impacto_en_Barranquilla.csv")
+except Exception as e:
+    st.error("No se pudo cargar el archivo CSV.")
+    st.stop()
 
-    df = pd.read_csv(archivo)
+# =========================
+# LIMPIEZA Y PREPARACIÓN
+# =========================
 
-    # Verificar columnas necesarias
-    if "fecha" not in df.columns or "delitos_alto_impacto" not in df.columns:
-        st.error("El archivo debe contener las columnas 'fecha' y 'delitos_alto_impacto'.")
-        st.stop()
+# Normalizar nombres de columnas
+df.columns = df.columns.str.strip().str.lower()
 
-    # Convertir fecha a formato datetime
-    df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
-    df = df.dropna(subset=["fecha"])
+# Verificar columnas necesarias
+if "fecha" not in df.columns:
+    st.error("No se encontró la columna 'fecha' en el archivo.")
+    st.stop()
 
-    # Mostrar información básica
-    st.subheader("Resumen del conjunto de datos")
-    st.write("Fecha mínima:", df["fecha"].min())
-    st.write("Fecha máxima:", df["fecha"].max())
-    st.write("Cantidad total de registros:", len(df))
+# Detectar automáticamente la columna de delitos
+columna_delito = None
+for col in df.columns:
+    if "alto" in col and "impacto" in col:
+        columna_delito = col
+        break
 
-    # Agrupar por mes obligatoriamente
-    df_mensual = (
-        df
-        .set_index("fecha")
-        .resample("M")
-        .sum(numeric_only=True)
-    )
+if columna_delito is None:
+    st.error("No se encontró una columna relacionada con delitos de alto impacto.")
+    st.stop()
 
-    if "delitos_alto_impacto" not in df_mensual.columns:
-        st.error("No se encontró la columna 'delitos_alto_impacto' después de agrupar.")
-        st.stop()
+# Convertir fecha
+df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
+df = df.dropna(subset=["fecha"])
 
-    serie = df_mensual["delitos_alto_impacto"].dropna()
+# Ordenar por fecha
+df = df.sort_values("fecha")
 
-    # Validación mínima
-    if len(serie) < 12:
-        st.warning("Se necesitan al menos 12 meses de datos para ajustar el modelo.")
-        st.stop()
+# Establecer índice temporal
+df.set_index("fecha", inplace=True)
 
-    # Ajustar modelo de suavizamiento exponencial
-    modelo = ExponentialSmoothing(
-        serie,
-        trend="add",
-        seasonal=None
-    ).fit()
+# Agrupar mensual
+df_mensual = df.resample("M").sum(numeric_only=True)
 
-    # Calcular meses hasta diciembre 2025
-    ultima_fecha = serie.index[-1]
-    meses_proyeccion = (2025 - ultima_fecha.year) * 12 + (12 - ultima_fecha.month)
+serie = df_mensual[columna_delito].dropna()
 
-    if meses_proyeccion <= 0:
-        st.warning("Los datos ya superan diciembre de 2025.")
-        st.stop()
+# =========================
+# VALIDACIÓN
+# =========================
 
-    pronostico = modelo.forecast(meses_proyeccion)
+st.subheader("Resumen del conjunto de datos")
 
-    # Gráfico
-    st.subheader("Serie histórica y pronóstico hasta diciembre 2025")
+st.write("Fecha mínima:", serie.index.min())
+st.write("Fecha máxima:", serie.index.max())
+st.write("Cantidad de meses disponibles:", len(serie))
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(serie.index, serie.values, label="Histórico")
-    ax.plot(pronostico.index, pronostico.values, label="Pronóstico", linestyle="--")
-    ax.set_xlabel("Fecha")
-    ax.set_ylabel("Delitos de alto impacto")
-    ax.legend()
+if len(serie) < 12:
+    st.warning("Se requieren al menos 12 meses de datos para ajustar el modelo.")
+    st.stop()
 
-    st.pyplot(fig)
+# =========================
+# MODELO DE SUAVIZAMIENTO EXPONENCIAL
+# =========================
 
-    # Mostrar tabla de pronóstico
-    df_pronostico = pronostico.reset_index()
-    df_pronostico.columns = ["fecha", "pronostico"]
+modelo = ExponentialSmoothing(
+    serie,
+    trend="add",
+    seasonal=None
+).fit()
 
-    st.subheader("Tabla de pronóstico")
-    st.dataframe(df_pronostico)
+# Calcular meses hasta diciembre 2025
+ultima_fecha = serie.index[-1]
+meses_proyeccion = (2025 - ultima_fecha.year) * 12 + (12 - ultima_fecha.month)
+
+if meses_proyeccion <= 0:
+    st.warning("Los datos ya superan diciembre de 2025.")
+    st.stop()
+
+pronostico = modelo.forecast(meses_proyeccion)
+
+# =========================
+# VISUALIZACIÓN
+# =========================
+
+st.subheader("Serie histórica y pronóstico hasta diciembre de 2025")
+
+fig, ax = plt.subplots(figsize=(12, 6))
+
+ax.plot(serie.index, serie.values, label="Histórico")
+ax.plot(pronostico.index, pronostico.values, linestyle="--", label="Pronóstico")
+
+ax.set_xlabel("Fecha")
+ax.set_ylabel("Delitos de alto impacto")
+ax.legend()
+
+st.pyplot(fig)
+
+# =========================
+# TABLA DE PRONÓSTICO
+# =========================
+
+df_pronostico = pronostico.reset_index()
+df_pronostico.columns = ["fecha", "pronostico"]
+
+st.subheader("Tabla de pronóstico")
+st.dataframe(df_pronostico)
