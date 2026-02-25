@@ -14,54 +14,70 @@ st.title("Pronóstico de Delitos de Alto Impacto en Barranquilla")
 
 try:
     df = pd.read_csv("Delitos_de_alto_impacto_en_Barranquilla.csv")
-except Exception as e:
+except Exception:
     st.error("No se pudo cargar el archivo CSV.")
     st.stop()
-
-# =========================
-# LIMPIEZA Y PREPARACIÓN
-# =========================
 
 # Normalizar nombres de columnas
 df.columns = df.columns.str.strip().str.lower()
 
-# Verificar columnas necesarias
-if "fecha" not in df.columns:
-    st.error("No se encontró la columna 'fecha' en el archivo.")
+st.write("Columnas detectadas en el archivo:")
+st.write(df.columns.tolist())
+
+# =========================
+# DETECTAR COLUMNA DE FECHA
+# =========================
+
+columna_fecha = None
+
+for col in df.columns:
+    if "fecha" in col or "año" in col or "ano" in col or "periodo" in col or "mes" in col:
+        columna_fecha = col
+        break
+
+if columna_fecha is None:
+    st.error("No se pudo detectar automáticamente la columna de fecha.")
     st.stop()
 
-# Detectar automáticamente la columna de delitos
+# Convertir a datetime
+df[columna_fecha] = pd.to_datetime(df[columna_fecha], errors="coerce")
+df = df.dropna(subset=[columna_fecha])
+
+# Ordenar
+df = df.sort_values(columna_fecha)
+
+# Establecer índice temporal
+df.set_index(columna_fecha, inplace=True)
+
+# =========================
+# DETECTAR COLUMNA DE DELITOS
+# =========================
+
 columna_delito = None
+
 for col in df.columns:
     if "alto" in col and "impacto" in col:
         columna_delito = col
         break
 
 if columna_delito is None:
-    st.error("No se encontró una columna relacionada con delitos de alto impacto.")
-    st.stop()
+    # Si no encuentra por nombre, toma la primera columna numérica
+    columnas_numericas = df.select_dtypes(include=np.number).columns
+    if len(columnas_numericas) > 0:
+        columna_delito = columnas_numericas[0]
+    else:
+        st.error("No se encontró una columna numérica para modelar.")
+        st.stop()
 
-# Convertir fecha
-df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
-df = df.dropna(subset=["fecha"])
+# =========================
+# AGRUPAR MENSUAL
+# =========================
 
-# Ordenar por fecha
-df = df.sort_values("fecha")
-
-# Establecer índice temporal
-df.set_index("fecha", inplace=True)
-
-# Agrupar mensual
 df_mensual = df.resample("M").sum(numeric_only=True)
 
 serie = df_mensual[columna_delito].dropna()
 
-# =========================
-# VALIDACIÓN
-# =========================
-
 st.subheader("Resumen del conjunto de datos")
-
 st.write("Fecha mínima:", serie.index.min())
 st.write("Fecha máxima:", serie.index.max())
 st.write("Cantidad de meses disponibles:", len(serie))
@@ -71,7 +87,7 @@ if len(serie) < 12:
     st.stop()
 
 # =========================
-# MODELO DE SUAVIZAMIENTO EXPONENCIAL
+# MODELO
 # =========================
 
 modelo = ExponentialSmoothing(
@@ -80,7 +96,6 @@ modelo = ExponentialSmoothing(
     seasonal=None
 ).fit()
 
-# Calcular meses hasta diciembre 2025
 ultima_fecha = serie.index[-1]
 meses_proyeccion = (2025 - ultima_fecha.year) * 12 + (12 - ultima_fecha.month)
 
@@ -94,22 +109,16 @@ pronostico = modelo.forecast(meses_proyeccion)
 # VISUALIZACIÓN
 # =========================
 
-st.subheader("Serie histórica y pronóstico hasta diciembre de 2025")
+st.subheader("Serie histórica y pronóstico hasta diciembre 2025")
 
 fig, ax = plt.subplots(figsize=(12, 6))
-
 ax.plot(serie.index, serie.values, label="Histórico")
 ax.plot(pronostico.index, pronostico.values, linestyle="--", label="Pronóstico")
-
 ax.set_xlabel("Fecha")
 ax.set_ylabel("Delitos de alto impacto")
 ax.legend()
 
 st.pyplot(fig)
-
-# =========================
-# TABLA DE PRONÓSTICO
-# =========================
 
 df_pronostico = pronostico.reset_index()
 df_pronostico.columns = ["fecha", "pronostico"]
