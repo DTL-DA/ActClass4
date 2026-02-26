@@ -23,7 +23,7 @@ st.markdown("---")
 # CARGA DE DATOS
 # -------------------------------------------------------------------
 
-archivo = st.file_uploader("Cargar archivo CSV", type=["csv"])
+archivo = st.file_uploader("Delitos_de_alto_impacto_en_Barranquilla", type=["csv"])
 
 if archivo is not None:
 
