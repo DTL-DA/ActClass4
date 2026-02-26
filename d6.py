@@ -1,80 +1,168 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import io
-import csv
+import plotly.graph_objects as go
 
-def mostrar_analisis_delitos():
-    st.title(" Análisis de Tendencias: Delitos de Alto Impacto")
+st.set_page_config(page_title="Delitos de Alto Impacto - Barranquilla", layout="wide")
 
-    # 1. CARGA Y LIMPIEZA (Lógica de tu Colab)
-    file_path = 'Delitos_de_alto_impacto_en_Barranquilla.csv'
-    encoding = 'latin1'
+# -------------------------------------------------------------------
+# Título y pregunta problema
+# -------------------------------------------------------------------
 
-    try:
-        with open(file_path, 'r', encoding=encoding) as f:
-            raw_content = f.read()
+st.title("Análisis de Delitos de Alto Impacto en Barranquilla")
 
-        processed_rows = []
-        for raw_line in raw_content.splitlines():
-            # Limpieza de comillas anidadas ""VALUE"" -> "VALUE"
-            inner_csv_line = raw_line[1:-1] if raw_line.startswith('"') and raw_line.endswith('"') else raw_line
-            inner_csv_line = inner_csv_line.replace('""', '"')
-            
-            reader = csv.reader(io.StringIO(inner_csv_line), delimiter=',', quotechar='"')
-            try:
-                processed_rows.append(next(reader))
-            except:
-                continue
+st.markdown("""
+### Pregunta problema
 
-        df_delitos = pd.DataFrame(processed_rows[1:], columns=processed_rows[0])
+¿Qué relación existe entre el volumen de denuncias y la variación observada en los delitos de alto impacto?
+""")
 
-        # 2. PROCESAMIENTO PARA LA GRÁFICA
-        # Corregir nombres de columnas por el encoding latin1
-        df_delitos.columns = [c.replace('AÃ±os', 'Anios').replace('Ãº', 'u') for c in df_delitos.columns]
-        
-        # Convertir a numérico la columna de casos
-        target_col = 'Casos/denuncias ultimo periodo'
-        df_delitos[target_col] = pd.to_numeric(df_delitos[target_col], errors='coerce').fillna(0)
+st.markdown("---")
 
-        # Agrupar como en tu Colab
-        time_series_data = df_delitos.groupby(['Anios comparados', 'Categoria_Delito'])[target_col].sum().reset_index()
-        
-        # Filtrar 'otros' y categorías vacías para limpiar la visualización
-        time_series_data = time_series_data[~time_series_data['Categoria_Delito'].isin(['otros', '', None])]
+# -------------------------------------------------------------------
+# Cargar datos
+# -------------------------------------------------------------------
 
-        # 3. CREACIÓN DE LA VISUALIZACIÓN (Estilo Colab pero Interactivo)
-        # Usamos Plotly con eje X categórico para evitar los "huecos" o picos
-        fig = px.line(
-            time_series_data, 
-            x='Anios comparados', 
-            y=target_col, 
-            color='Categoria_Delito',
-            markers=True,
-            title='Evolución de Delitos por Periodos Comparados',
-            labels={target_col: 'Total de Casos', 'Anios comparados': 'Periodo de Comparación'}
-        )
+archivo = st.file_uploader("Cargar archivo CSV", type=["csv"])
 
-        # Forzar el eje X a ser categórico para que no intente rellenar fechas
-        fig.update_xaxes(type='category', tickangle=45)
-        fig.update_layout(
-            legend_title_text='Categoría',
-            hovermode="x unified",
-            template="plotly_dark" # Para que combine con el estilo de tu dashboard
-        )
+if archivo is not None:
+    df = pd.read_csv(archivo)
 
-        # 4. RENDERIZADO EN STREAMLIT
-        st.plotly_chart(fig, use_container_width=True)
+    # Limpieza básica
+    df.columns = df.columns.str.strip()
 
-        # Mostrar tabla resumen para auditoría
-        with st.expander("Ver tabla de datos agregados"):
-            st.dataframe(time_series_data)
+    # Convertir columnas numéricas
+    df["Casos/denuncias  anterior periodo"] = pd.to_numeric(
+        df["Casos/denuncias  anterior periodo"], errors="coerce"
+    )
 
-    except FileNotFoundError:
-        st.error(f"No se encontró el archivo: {file_path}. Asegúrate de que esté en la raíz del proyecto.")
-    except Exception as e:
-        st.error(f"Error al procesar los datos: {e}")
+    df["Casos/denuncias último periodo"] = pd.to_numeric(
+        df["Casos/denuncias último periodo"], errors="coerce"
+    )
 
-# Ejecutar la función
-if __name__ == "__main__":
-    mostrar_analisis_delitos()
+    df["Variación %"] = (
+        df["Variación %"]
+        .astype(str)
+        .str.replace("%", "", regex=False)
+        .str.replace(",", ".", regex=False)
+    )
+
+    df["Variación %"] = pd.to_numeric(df["Variación %"], errors="coerce")
+
+    df["Variación absoluta"] = pd.to_numeric(
+        df["Variación absoluta"], errors="coerce"
+    )
+
+    # Eliminar filas vacías
+    df = df.dropna(subset=["Casos/denuncias último periodo"])
+
+    # -------------------------------------------------------------------
+    # Indicadores generales
+    # -------------------------------------------------------------------
+
+    total_denuncias = df["Casos/denuncias último periodo"].sum()
+    variacion_promedio = df["Variación %"].mean()
+
+    col1, col2 = st.columns(2)
+
+    col1.metric("Total denuncias último periodo", f"{int(total_denuncias):,}")
+    col2.metric("Variación porcentual promedio", f"{variacion_promedio:.2f}%")
+
+    st.markdown("---")
+
+    # -------------------------------------------------------------------
+    # 1. Ranking por volumen de denuncias
+    # -------------------------------------------------------------------
+
+    st.subheader("Ranking por volumen de denuncias")
+
+    df_volumen = df.sort_values(
+        by="Casos/denuncias último periodo", ascending=False
+    )
+
+    fig1 = px.bar(
+        df_volumen,
+        x="Delito",
+        y="Casos/denuncias último periodo",
+        title="Volumen de denuncias por tipo de delito",
+    )
+
+    fig1.update_layout(xaxis_tickangle=45)
+
+    st.plotly_chart(fig1, use_container_width=True)
+
+    # -------------------------------------------------------------------
+    # 2. Variación porcentual por delito
+    # -------------------------------------------------------------------
+
+    st.subheader("Variación porcentual por delito")
+
+    fig2 = px.bar(
+        df,
+        x="Delito",
+        y="Variación %",
+        title="Variación porcentual entre periodos",
+    )
+
+    fig2.update_layout(xaxis_tickangle=45)
+
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # -------------------------------------------------------------------
+    # 3. Relación entre volumen y variación
+    # -------------------------------------------------------------------
+
+    st.subheader("Relación entre volumen de denuncias y variación porcentual")
+
+    fig3 = px.scatter(
+        df,
+        x="Casos/denuncias último periodo",
+        y="Variación %",
+        size="Casos/denuncias último periodo",
+        color="Delito",
+        hover_name="Delito",
+        title="Volumen vs Variación %",
+    )
+
+    st.plotly_chart(fig3, use_container_width=True)
+
+    # -------------------------------------------------------------------
+    # 4. Participación porcentual de cada delito
+    # -------------------------------------------------------------------
+
+    st.subheader("Participación porcentual de cada delito")
+
+    df["Participación %"] = (
+        df["Casos/denuncias último periodo"] / total_denuncias * 100
+    )
+
+    fig4 = px.pie(
+        df,
+        values="Casos/denuncias último periodo",
+        names="Delito",
+        title="Distribución de denuncias por delito",
+    )
+
+    st.plotly_chart(fig4, use_container_width=True)
+
+    # -------------------------------------------------------------------
+    # 5. Correlación estadística
+    # -------------------------------------------------------------------
+
+    st.subheader("Análisis de correlación")
+
+    correlacion = df["Casos/denuncias último periodo"].corr(df["Variación %"])
+
+    st.write(
+        f"Coeficiente de correlación entre volumen de denuncias y variación porcentual: {correlacion:.3f}"
+    )
+
+    if correlacion > 0:
+        st.write("Existe una relación positiva entre volumen y variación.")
+    elif correlacion < 0:
+        st.write("Existe una relación negativa entre volumen y variación.")
+    else:
+        st.write("No se observa relación lineal significativa.")
+
+else:
+    st.info("Cargue el archivo CSV para visualizar el análisis.")
