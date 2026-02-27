@@ -156,14 +156,18 @@ if pagina == "Dashboard Analítico":
     st.plotly_chart(fig4, use_container_width=True)
 
     st.markdown("""
-    ## es alta y positiva (cerca de 1), significa:
+    ## Es alta y positiva (cerca de 1), significa:  
+    
        Los delitos más frecuentes siguen siendo los más frecuentes.
-       La estructura delictiva es estable.   
+       
+       La estructura delictiva es estable.  
+       
        El impacto delictivo está concentrado en delitos estructurales.
        """)
 
     st.markdown("""
     ## Si fuera baja:
+    
        Hubo reconfiguración del patrón delictivo
        """)
 
@@ -173,6 +177,10 @@ if pagina == "Dashboard Analítico":
 
     st.markdown("---")
     st.subheader("Análisis de concentración – Principio de Pareto (80/20)")
+
+    st.markdown("""
+    ## ¿Se cumple el principio de "Pareto" 80/20 en la variación de los delitos de alto impacto?
+       """)
 
     tabla_pareto = tabla_resumen.copy()
     tabla_pareto["Impacto absoluto"] = tabla_pareto["Variación absoluta"].abs()
@@ -215,6 +223,22 @@ if pagina == "Dashboard Analítico":
         use_container_width=True
     )
 
+
+    st.markdown("""
+    ## Si el gráfico muestra que pocos delitos concentran el 80%:
+
+       El fenómeno es estructural y focalizable
+       
+       La política pública puede priorizar esos delitos
+
+       Contrario a esto:
+
+       Si el 80% del cambio necesita muchos delitos:
+
+       El fenómeno es generalizado
+       
+       Se requieren estrategias transversales
+       """)
 # -------------------------------------------------------------------
 # PÁGINA 2: DOCUMENTACIÓN
 # -------------------------------------------------------------------
