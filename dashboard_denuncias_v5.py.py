@@ -16,11 +16,19 @@ pagina = st.sidebar.radio(
 
 # -------------------------------------------------------------------
 # FUNCIÓN DE CARGA AUTOMÁTICA (Actualiza cada 24 horas)
+# Endpoint oficial Socrata
 # -------------------------------------------------------------------
 
 @st.cache_data(ttl=86400)
 def cargar_datos():
-    return pd.read_csv("https://www.datos.gov.co/api/views/72fa-9d9m/export.csv")
+    url = "https://www.datos.gov.co/resource/4p95-h82w.csv"
+    try:
+        df = pd.read_csv(url)
+        return df
+    except Exception:
+        st.error("⚠️ Error al cargar datos desde el portal oficial de Datos Abiertos Colombia.")
+        st.info("Verifique conexión a internet o disponibilidad del portal.")
+        st.stop()
 
 
 # -------------------------------------------------------------------
@@ -29,9 +37,21 @@ def cargar_datos():
 
 if pagina == "Dashboard Analítico":
 
-    # CARGA DEL DATASET
     df = cargar_datos()
     df.columns = df.columns.str.strip()
+
+    # Verificación de columnas necesarias
+    columnas_necesarias = [
+        "Años comparados",
+        "Delito",
+        "Casos/denuncias  anterior periodo",
+        "Casos/denuncias último periodo"
+    ]
+
+    for col in columnas_necesarias:
+        if col not in df.columns:
+            st.error(f"La columna '{col}' no existe en el dataset.")
+            st.stop()
 
     # Conversión de variables numéricas
     df["Casos/denuncias  anterior periodo"] = pd.to_numeric(
@@ -55,7 +75,7 @@ if pagina == "Dashboard Analítico":
     Este panel analiza el comportamiento de los delitos de alto impacto en Barranquilla durante el periodo 2019–2023,
     utilizando el volumen de denuncias como variable central. El objetivo es evaluar la relación entre la dinámica de
     las denuncias y la variación observada en cada delito, aportando una base técnica para la formulación de la
-    estrategia de seguridad y la elaboración del PISCC.
+    estrategia de seguridad y la elaboración del Plan Integral de Seguridad y Convivencia Ciudadana (PISCC).
     """)
 
     st.markdown("---")
@@ -130,7 +150,7 @@ if pagina == "Dashboard Analítico":
 
     st.markdown("---")
 
-    # TABLA RESUMEN FINAL (DE ÚLTIMA)
+    # TABLA RESUMEN FINAL
     st.subheader("Tabla resumen consolidada por delito")
     st.dataframe(tabla_resumen, use_container_width=True)
 
@@ -150,8 +170,11 @@ elif pagina == "Documentación y Metodología":
     - Portal: Datos Abiertos Colombia  
     - Entidad publicadora: Alcaldía Distrital de Barranquilla  
     - Dataset: Comparativo de delitos de alto impacto en la ciudad de Barranquilla  
-    - Acceso mediante API pública (actualización automática cada 24 horas)
+    - Acceso mediante API pública oficial (Socrata)
     """)
+
+    st.markdown("## Endpoint utilizado")
+    st.write("https://www.datos.gov.co/resource/4p95-h82w.csv")
 
     st.markdown("## Periodo analizado")
     st.write("Comparaciones interanuales entre 2019 y 2023.")
@@ -159,7 +182,7 @@ elif pagina == "Documentación y Metodología":
     st.markdown("## Metodología aplicada")
     st.write("""
     El análisis sigue el marco QUEST:
-    
+
     - Q: Definición de la pregunta sobre relación entre denuncias y variación delictiva.
     - U: Comprensión de estructura del dataset.
     - E: Exploración comparativa de periodos.
@@ -167,8 +190,5 @@ elif pagina == "Documentación y Metodología":
     - T: Comunicación visual mediante dashboard interactivo.
     """)
 
-    st.markdown("## Enlace oficial del dataset")
-    st.write("https://www.datos.gov.co/d/4p95-h82w")
-
     st.markdown("---")
-    st.info("Este panel prioriza transparencia, trazabilidad y actualización automática de la información.")
+    st.info("Este panel prioriza transparencia, trazabilidad, actualización automática y soporte técnico para la toma de decisiones.")
