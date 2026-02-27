@@ -195,7 +195,6 @@ st.dataframe(tabla_resumen, use_container_width=True)
 # -------------------------------------------------------------------
 # PÁGINA 2: DOCUMENTACIÓN
 # -------------------------------------------------------------------
-
 elif pagina == "Documentación y Metodología":
 
     st.title("Documentación del Panel")
