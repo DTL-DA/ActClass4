@@ -134,7 +134,7 @@ elif pagina == "Documentación y Metodología":
     st.markdown("## Fecha de acceso a los datos")
     st.write(f"""
     Los datos fueron consultados y procesados el:  
-    **Fecha de consulta: sábado, ‎21 ‎de ‎febrero ‎de ‎2026, ‏‎11:21:53 a. m.**
+    **Sábado, ‎21 ‎de ‎febrero ‎de ‎2026, ‏‎11:21:53 a. m.**
     """)
 
     st.markdown("## Periodo analizado")
