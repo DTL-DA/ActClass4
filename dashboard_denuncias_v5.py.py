@@ -37,15 +37,14 @@ if pagina == "Dashboard Analítico":
 
     df = cargar_datos()
 
-    # Normalización nombres de columnas
+    # Normalización nombres columnas
     df.columns = df.columns.str.lower().str.strip()
 
-    # Renombrar columnas según estructura API
+    # Renombrar según estructura REAL del dataset
     df = df.rename(columns={
-        "a_os_comparados": "años",
-        "delito": "delito",
-        "casos_denuncias_anterior_periodo": "anterior",
-        "casos_denuncias_ltimo_periodo": "actual"
+        "casos_denuncias_anterior": "anterior",
+        "actual": "actual",
+        "a_os": "años"  # por si llega codificado raro
     })
 
     columnas_necesarias = ["años", "delito", "anterior", "actual"]
@@ -66,15 +65,22 @@ if pagina == "Dashboard Analítico":
 
     st.title("Análisis de Delitos de Alto Impacto en Barranquilla")
 
-    st.markdown("""
-    ## ¿Qué relación existe entre el volumen de denuncias y la variación observada en los delitos de alto impacto?
-    """)
+    st.markdown("## Periodo analizado")
+    st.write("Comparaciones interanuales entre periodos 2019 – 2023")
 
     st.markdown("""
-    Este panel analiza el comportamiento de los delitos de alto impacto en Barranquilla durante el periodo 2019–2023,
-    utilizando el volumen de denuncias como variable central. Busca evaluar la relación entre denuncias y variación
-    delictiva, identificar patrones estructurales y emergentes, y aportar una base técnica para la formulación de la
-    estrategia de seguridad en el marco del Plan Integral de Seguridad y Convivencia Ciudadana (PISCC).
+    Este panel presenta un análisis comparativo de los delitos de alto impacto en Barranquilla durante el periodo 2019–2023,
+    utilizando el volumen de denuncias como variable central para comprender su evolución y comportamiento. 
+    El objetivo es evaluar la relación entre la dinámica de las denuncias y la variación observada en cada delito,
+    identificando patrones estructurales y tendencias emergentes. 
+
+    A través de métricas agregadas, comparativos interanuales y visualizaciones analíticas, el usuario puede interpretar
+    la magnitud y concentración del impacto delictivo. Las métricas superiores resumen los cambios totales entre periodos,
+    mientras que los gráficos detallan la contribución individual por delito.
+
+    Este análisis busca aportar una base técnica y empírica para la formulación y focalización de la estrategia de seguridad
+    de la ciudad. En particular, sirve como insumo para la elaboración y ajuste del Plan Integral de Seguridad y Convivencia
+    Ciudadana (PISCC).
     """)
 
     st.markdown("---")
@@ -85,8 +91,8 @@ if pagina == "Dashboard Analítico":
 
     st.sidebar.header("Filtros")
 
-    años = sorted(df["años"].unique())
-    delitos = sorted(df["delito"].unique())
+    años = sorted(df["años"].dropna().unique())
+    delitos = sorted(df["delito"].dropna().unique())
 
     año_seleccionado = st.sidebar.multiselect(
         "Seleccionar año",
@@ -164,10 +170,11 @@ elif pagina == "Documentación y Metodología":
 
     st.markdown("## Fuente de datos")
     st.write("""
-    - Portal: Datos Abiertos Colombia
-    - Entidad publicadora: Alcaldía Distrital de Barranquilla
-    - Dataset: Comparativo de delitos de alto impacto en la ciudad de Barranquilla
-    - Acceso mediante API pública Socrata
+    - Portal: Datos Abiertos Colombia  
+    - Entidad publicadora: Alcaldía Distrital de Barranquilla  
+    - Dataset: Comparativo de delitos de alto impacto en Barranquilla  
+    - Acceso mediante API pública Socrata  
+    - Link: https://www.datos.gov.co/d/4p95-h82w (presionar en "Exportar")
     """)
 
     st.markdown("## Fecha de acceso")
@@ -188,9 +195,9 @@ elif pagina == "Documentación y Metodología":
     st.write("""
     - Q: Definición de la pregunta sobre relación entre denuncias y variación delictiva.
     - U: Comprensión de la estructura del dataset.
-    - E: Exploración comparativa entre periodos.
+    - E: Exploración comparativa entre periodos 2019–2023.
     - S: Identificación de patrones estructurales y emergentes.
-    - T: Comunicación visual y soporte técnico para toma de decisiones.
+    - T: Comunicación visual mediante dashboard interactivo.
     """)
 
     st.markdown("---")
