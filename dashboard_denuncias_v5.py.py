@@ -153,18 +153,12 @@ elif pagina == "Documentación y Metodología":
     - T: Comunicación visual mediante dashboard interactivo.
     """)
 
-    st.markdown("## ¿Cómo actualizar los datos en el futuro?")
+    st.markdown("## Fuente:")
     st.write("""
-    Para mantener actualizado el panel:
-
-    1. Reemplazar el archivo CSV por la versión más reciente.
-    2. Mantener la misma estructura de columnas.
-    3. Verificar consistencia de nombres de delitos.
-    4. Ejecutar nuevamente la aplicación.
-    
-    En caso de integración futura con datos en línea:
-    - Se puede conectar a una API oficial.
-    - O automatizar la descarga periódica del dataset.
+   
+   Link de acceso: https://www.datos.gov.co/d/4p95-h82w. presionar en "EXPORTAR"
+   Fecha de consulta: sábado, ‎21 ‎de ‎febrero ‎de ‎2026, ‏‎11:21:53 a. m.
+   
     """)
 
     st.markdown("---")
