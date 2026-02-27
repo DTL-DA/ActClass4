@@ -153,7 +153,57 @@ fig_comp.update_layout(xaxis_tickangle=45)
 st.plotly_chart(fig_comp, use_container_width=True)
 
 st.markdown("---")
+# -------------------------------------------------------------------
+# PRINCIPIO DE PARETO 80/20
+# -------------------------------------------------------------------
 
+st.markdown("---")
+st.subheader("Análisis de concentración – Principio de Pareto (80/20)")
+
+# Usamos valor absoluto porque interesa magnitud del cambio
+tabla_pareto = tabla_resumen.copy()
+tabla_pareto["Impacto absoluto"] = tabla_pareto["Variación absoluta"].abs()
+
+# Ordenar de mayor a menor impacto
+tabla_pareto = tabla_pareto.sort_values(
+    by="Impacto absoluto", ascending=False
+)
+
+# Calcular porcentaje del total
+total_impacto = tabla_pareto["Impacto absoluto"].sum()
+
+tabla_pareto["% del total"] = (
+    tabla_pareto["Impacto absoluto"] / total_impacto * 100
+)
+
+tabla_pareto["% acumulado"] = tabla_pareto["% del total"].cumsum()
+
+# Clasificación 80/20
+tabla_pareto["Grupo"] = tabla_pareto["% acumulado"].apply(
+    lambda x: "Delitos que explican el 80%" if x <= 80 else "Resto de delitos"
+)
+
+# Agrupar para gráfica de torta
+resumen_pareto = tabla_pareto.groupby("Grupo")["Impacto absoluto"].sum().reset_index()
+
+fig_pareto = px.pie(
+    resumen_pareto,
+    values="Impacto absoluto",
+    names="Grupo",
+    title="Concentración del cambio total en denuncias (Principio de Pareto)"
+)
+
+st.plotly_chart(fig_pareto, use_container_width=True)
+
+# Mostrar delitos que explican el 80%
+st.markdown("### Delitos que concentran el 80% del cambio")
+
+delitos_criticos = tabla_pareto[tabla_pareto["Grupo"] == "Delitos que explican el 80%"]
+
+st.dataframe(
+    delitos_criticos[["Delito", "Variación absoluta", "% acumulado"]],
+    use_container_width=True
+)
 # -------------------------------------------------------------------
 # TABLA RESUMEN FINAL
 # -------------------------------------------------------------------
