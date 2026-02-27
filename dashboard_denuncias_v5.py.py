@@ -173,7 +173,7 @@ tabla_resumen["Variación absoluta"] = (
         tabla_resumen["Casos/denuncias  anterior periodo"]
     )
 
-    st.subheader("Variación absoluta por delito")
+st.subheader("Variación absoluta por delito")
 
 fig_var_abs = px.bar(
         tabla_resumen,
